@@ -1,0 +1,72 @@
+# Copyright (c) 2018 Samsung Electronics Co., Ltd All Rights Reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+
+PROJECT("amlogic-vsi-npu-sdk")
+
+IF(NOT DEFINED FULLVER)
+	SET(FULLVER "6.3.3.4")
+ENDIF(NOT DEFINED FULLVER)
+
+SET(PREFIX ${CMAKE_INSTALL_PREFIX})
+
+IF(NOT DEFINED BINDIR)
+	SET(BINDIR "${PREFIX}/bin")
+ENDIF(NOT DEFINED BINDIR)
+
+IF(NOT DEFINED LIBDIR)
+	SET(LIBDIR "${PREFIX}/lib")
+ENDIF(NOT DEFINED LIBDIR)
+
+IF(NOT DEFINED PCDIR)
+	SET(PCDIR "${PREFIX}/lib/pkgconfig")
+ENDIF(NOT DEFINED PCDIR)
+
+IF(NOT DEFINED INCDIR)
+	SET(INCDIR "${PREFIX}/include/${PROJECT_NAME}")
+ENDIF(NOT DEFINED INCDIR)
+
+SET(pc_dependents "")
+
+SET(PC_NAME ${PROJECT_NAME})
+SET(PC_REQUIRED ${pc_dependents})
+SET(PC_CFLAGS "-DgcdENABLE_3D=1 -DgcdENABLE_2D=0 -DgcdENABLE_VG=0 -DgcdUSE_VX=1")
+SET(PC_CFLAGS "${PC_CFLAGS} -DgcdENABLE_3D=1 -DgcdENABLE_2D=0 -DgcdENABLE_VG=0")
+SET(PC_CFLAGS "${PC_CFLAGS} -DgcdUSE_VX=1 -DUSE_VDK=1 -DgcdMOVG=0 -DEGL_API_FB")
+SET(PC_CFLAGS "${PC_CFLAGS} -DgcdSTATIC_LINK=0 -DgcdFPGA_BUILD=0 -DGC_ENABLE_LOADTIME_OPT=1")
+SET(PC_CFLAGS "${PC_CFLAGS} -DgcdUSE_VXC_BINARY=0 -DgcdGC355_MEM_PRINT=0")
+SET(PC_CFLAGS "${PC_CFLAGS} -DgcdGC355_PROFILER=0 -DVIVANTE_PROFILER=1 -DVIVANTE_PROFILER_CONTEXT=1")
+SET(PC_LDFLAGS "-lOpenVX -lOpenVXU -lCLC -lVSC -lGAL -lm -lrt")
+SET(PC_DESCRIPTION "Amlogic Verisilicon NPU SDK Library")
+CONFIGURE_FILE(
+    ${PROJECT_NAME}.pc.in
+    ${PROJECT_NAME}.pc
+    @ONLY
+)
+
+IF("${ARCH}" STREQUAL "arm")
+INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/sdk/lib32/ DESTINATION ${LIBDIR}
+		FILES_MATCHING PATTERN "*.so")
+ELSE("${ARCH}" STREQUAL "arm")
+INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/sdk/lib64/ DESTINATION ${LIBDIR}
+		FILES_MATCHING PATTERN "*.so")
+ENDIF("${ARCH}" STREQUAL "arm")
+
+INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/sdk/include/ DESTINATION ${INCDIR}
+		FILES_MATCHING PATTERN "*.h")
+INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/sdk/nngpu_kernels DESTINATION ${INCDIR})
+INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/sdk/nnvxc_kernels DESTINATION ${INCDIR})
+INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/sdk/ovx12_vxcKernels DESTINATION ${INCDIR})
+INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc DESTINATION ${PCDIR})

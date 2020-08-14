@@ -1,0 +1,272 @@
+#pragma OPENCL EXTENSION cl_viv_vx_extension : enable
+
+#include "cl_viv_vx_ext.h"
+
+_viv_uniform VXC_512Bits uniConvertIntegerLo_2x8;
+_viv_uniform VXC_512Bits uniConvertIntegerHi_2x8;
+
+__kernel void vxcActivation_Relu_I8toF16_2D(
+    __read_only image2d_array_t   input,
+    __write_only image2d_array_t  output)
+{
+    int2 coord = (int2)(get_global_id(0), get_global_id(1));
+
+    vxc_char16 src0;
+    vxc_half8  dst0;
+    vxc_short8 dst;
+
+    VXC_ReadImage(src0, input, coord, 0, VXC_MODIFIER(0, 15, 0, VXC_RM_TowardZero, 0));
+
+    src0 = max(0, src0);
+    VXC_DP2x8(dst0, src0, src0, VXC_MODIFIER(0, 7, 0, VXC_RM_ToNearestEven, 1), uniConvertIntegerLo_2x8);
+
+    _viv_asm(COPY, dst, dst0, 16);
+    VXC_WriteImage(output, coord, dst, VXC_MODIFIER(0, 7, 0, VXC_RM_TowardZero, 0));
+}
+
+__kernel void vxcActivation_Relu_F16toF16_2D(
+    __read_only image2d_array_t   input,
+    __write_only image2d_array_t  output)
+{
+    int2 coord = (int2)(get_global_id(0), get_global_id(1));
+
+    vxc_short8 src0;
+
+    VXC_ReadImage(src0, input, coord, 0, VXC_MODIFIER(0, 7, 0, VXC_RM_TowardZero, 0));
+    src0 = max(0, src0);
+    VXC_WriteImage(output, coord, src0, VXC_MODIFIER(0, 7, 0, VXC_RM_TowardZero, 0));
+}
+
+__kernel void vxcActivation_Relu_F16toI8_2D(
+    __read_only image2d_array_t   input,
+    __write_only image2d_array_t  output)
+{
+    int2 coord = (int2)(get_global_id(0), get_global_id(1));
+
+    vxc_short8 v0, v1;
+    vxc_half8 src0, src1;
+    vxc_char16 dst;
+
+    VXC_ReadImage(v0, input, coord, 0, VXC_MODIFIER(0, 7, 0, VXC_RM_TowardZero, 0));
+    _viv_asm(COPY, src0, v0, 16);
+    VXC_ReadImage(v1, input, coord, VXC_5BITOFFSET_XY(8, 0), VXC_MODIFIER(0, 7, 0, VXC_RM_TowardZero, 0));
+    _viv_asm(COPY, src1, v1, 16);
+
+    VXC_DP2x8(dst, src0, src0, VXC_MODIFIER(0, 7, 0, VXC_RM_ToNearestEven, 1), uniConvertIntegerLo_2x8);
+    VXC_DP2x8(dst, src1, src1, VXC_MODIFIER(8, 15, 0, VXC_RM_ToNearestEven, 1), uniConvertIntegerLo_2x8);
+    dst = max(0, dst);
+
+    VXC_WriteImage(output, coord, dst, VXC_MODIFIER(0, 15, 0, VXC_RM_TowardZero, 0));
+}
+
+__kernel void vxcActivation_Relu_I8toI8_2D(
+    __read_only image2d_array_t   input,
+    __write_only image2d_array_t  output)
+{
+    int2 coord = (int2)(get_global_id(0), get_global_id(1));
+
+    vxc_char16 src0;
+    vxc_uchar16 dst;
+
+    VXC_ReadImage(src0, input, coord, 0, VXC_MODIFIER(0, 15, 0, VXC_RM_TowardZero, 0));
+
+    VXC_DP2x8(dst, src0, src0, VXC_MODIFIER(0, 7, 0, VXC_RM_ToNearestEven, 1), uniConvertIntegerLo_2x8);
+    VXC_DP2x8(dst, src0, src0, VXC_MODIFIER(8, 15, 0, VXC_RM_ToNearestEven, 1), uniConvertIntegerHi_2x8);
+    _viv_asm(COPY, src0, dst, 16);
+
+    VXC_WriteImage(output, coord, src0, VXC_MODIFIER(0, 15, 0, VXC_RM_TowardZero, 0));
+}
+
+__kernel void vxcActivation_Relu_I8toF16(
+    __read_only image2d_array_t   input,
+    __write_only image2d_array_t  output)
+{
+    int4 coord = (int4)(get_global_id(0), get_global_id(1), get_global_id(2), 0);
+
+    vxc_char16 src0;
+    vxc_half8  dst0;
+    vxc_short8 dst;
+
+    VXC_ReadImage2DArray(src0, input, coord, 0, VXC_MODIFIER(0, 15, 0, VXC_RM_TowardZero, 0));
+
+    src0 = max(0, src0);
+    VXC_DP2x8(dst0, src0, src0, VXC_MODIFIER(0, 7, 0, VXC_RM_ToNearestEven, 1), uniConvertIntegerLo_2x8);
+
+    _viv_asm(COPY, dst, dst0, 16);
+    VXC_WriteImage2DArray(output, coord, dst, VXC_MODIFIER(0, 7, 0, VXC_RM_TowardZero, 0));
+}
+
+__kernel void vxcActivation_Relu_F16toF16(
+    __read_only image2d_array_t   input,
+    __write_only image2d_array_t  output)
+{
+    int4 coord = (int4)(get_global_id(0), get_global_id(1), get_global_id(2), 0);
+
+    vxc_short8 src0;
+
+    VXC_ReadImage2DArray(src0, input, coord, 0, VXC_MODIFIER(0, 7, 0, VXC_RM_TowardZero, 0));
+    src0 = max(0, src0);
+    VXC_WriteImage2DArray(output, coord, src0, VXC_MODIFIER(0, 7, 0, VXC_RM_TowardZero, 0));
+}
+
+__kernel void vxcActivation_Relu_F16toI8(
+    __read_only image2d_array_t   input,
+    __write_only image2d_array_t  output)
+{
+    int4 coord = (int4)(get_global_id(0), get_global_id(1), get_global_id(2), 0);
+
+    vxc_short8 v0, v1;
+    vxc_half8 src0, src1;
+    vxc_char16 dst;
+
+    VXC_ReadImage2DArray(v0, input, coord, 0, VXC_MODIFIER(0, 7, 0, VXC_RM_TowardZero, 0));
+    _viv_asm(COPY, src0, v0, 16);
+    VXC_ReadImage2DArray(v1, input, coord, VXC_5BITOFFSET_XY(8, 0), VXC_MODIFIER(0, 7, 0, VXC_RM_TowardZero, 0));
+    _viv_asm(COPY, src1, v1, 16);
+
+    VXC_DP2x8(dst, src0, src0, VXC_MODIFIER(0, 7, 0, VXC_RM_ToNearestEven, 1), uniConvertIntegerLo_2x8);
+    VXC_DP2x8(dst, src1, src1, VXC_MODIFIER(8, 15, 0, VXC_RM_ToNearestEven, 1), uniConvertIntegerLo_2x8);
+    dst = max(0, dst);
+
+    VXC_WriteImage2DArray(output, coord, dst, VXC_MODIFIER(0, 15, 0, VXC_RM_TowardZero, 0));
+}
+
+__kernel void vxcActivation_Relu_I8toI8(
+    __read_only image2d_array_t   input,
+    __write_only image2d_array_t  output)
+{
+    int4 coord = (int4)(get_global_id(0), get_global_id(1), get_global_id(2), 0);
+
+    vxc_char16 src0;
+
+    VXC_ReadImage2DArray(src0, input, coord, 0, VXC_MODIFIER(0, 15, 0, VXC_RM_TowardZero, 0));
+
+    VXC_DP2x8(src0, src0, src0, VXC_MODIFIER(0, 7, 0, VXC_RM_ToNearestEven, 1), uniConvertIntegerLo_2x8);
+    VXC_DP2x8(src0, src0, src0, VXC_MODIFIER(8, 15, 0, VXC_RM_ToNearestEven, 1), uniConvertIntegerHi_2x8);
+    src0 = max(0, src0);
+
+    VXC_WriteImage2DArray(output, coord, src0, VXC_MODIFIER(0, 15, 0, VXC_RM_TowardZero, 0));
+}
+
+_viv_uniform int4 packedMinData;
+_viv_uniform int4 packedMaxData;
+_viv_uniform int4 packedMinData_FP16;
+_viv_uniform int4 packedMaxData_FP16;
+
+__kernel void vxcActivation_Clip_I8toI8 (
+    __read_only image2d_array_t   input,
+    __write_only image2d_array_t  output)
+{
+    int4 coord = (int4)(get_global_id(0), get_global_id(1), get_global_id(2), 0);
+
+    vxc_char16 src0, min, max;
+
+    VXC_ReadImage2DArray(src0, input, coord, 0, VXC_MODIFIER(0, 15, 0, VXC_RM_TowardZero, 0));
+
+    VXC_DP2x8(src0, src0, src0, VXC_MODIFIER(0, 7, 0, VXC_RM_ToNearestEven, 1), uniConvertIntegerLo_2x8);
+    VXC_DP2x8(src0, src0, src0, VXC_MODIFIER(8, 15, 0, VXC_RM_ToNearestEven, 1), uniConvertIntegerHi_2x8);
+    _viv_asm(COPY, min, packedMinData, 16);
+    _viv_asm(COPY, max, packedMaxData, 16);
+    VXC_Clamp(src0, src0, min, max, VXC_MODIFIER_CLAMP(0, 15, 0, 0));
+
+    VXC_WriteImage2DArray(output, coord, src0, VXC_MODIFIER(0, 15, 0, VXC_RM_TowardZero, 0));
+}
+
+__kernel void vxcActivation_Clip_I8toI8_2D (
+    __read_only image2d_array_t   input,
+    __write_only image2d_array_t  output)
+{
+    int2 coord = (int2)(get_global_id(0), get_global_id(1));
+
+    vxc_char16 src0, min, max;
+
+    VXC_ReadImage(src0, input, coord, 0, VXC_MODIFIER(0, 15, 0, VXC_RM_TowardZero, 0));
+
+    VXC_DP2x8(src0, src0, src0, VXC_MODIFIER(0, 7, 0, VXC_RM_ToNearestEven, 1), uniConvertIntegerLo_2x8);
+    VXC_DP2x8(src0, src0, src0, VXC_MODIFIER(8, 15, 0, VXC_RM_ToNearestEven, 1), uniConvertIntegerHi_2x8);
+    _viv_asm(COPY, min, packedMinData, 16);
+    _viv_asm(COPY, max, packedMaxData, 16);
+    VXC_Clamp(src0, src0, min, max, VXC_MODIFIER_CLAMP(0, 15, 0, 0));
+
+    VXC_WriteImage(output, coord, src0, VXC_MODIFIER(0, 15, 0, VXC_RM_TowardZero, 0));
+}
+
+__kernel void vxcActivation_Clip_F16toF16_2D (
+    __read_only image2d_array_t   input,
+    __write_only image2d_array_t  output)
+{
+    int2 coord = (int2)(get_global_id(0), get_global_id(1));
+
+    vxc_ushort8 vect0, dst;
+    vxc_half8 vec0, min, max;
+
+    VXC_ReadImage(vect0, input, coord, 0, VXC_MODIFIER(0, 7, 0, VXC_RM_TowardZero, 0));
+    _viv_asm(COPY, vec0, vect0, 16);
+
+    _viv_asm(COPY, min, packedMinData_FP16, 16);
+    _viv_asm(COPY, max, packedMaxData_FP16, 16);
+    VXC_Clamp_Half(vec0, vec0, min, max, VXC_MODIFIER_CLAMP(0, 7, 0, 0));
+    _viv_asm(COPY, dst, vec0, 16);
+
+    VXC_WriteImage(output, coord, dst, VXC_MODIFIER(0, 7, 0,VXC_RM_TowardZero, 0));
+}
+
+__kernel void vxcActivation_Clip_F16toF16 (
+    __read_only image2d_array_t   input,
+    __write_only image2d_array_t  output)
+{
+    int4 coord = (int4)(get_global_id(0), get_global_id(1), get_global_id(2), 0);
+
+    vxc_ushort8 vect0, dst;
+    vxc_half8 vec0, min, max;
+
+    VXC_ReadImage2DArray(vect0, input, coord, 0, VXC_MODIFIER(0, 7, 0, VXC_RM_TowardZero, 0));
+    _viv_asm(COPY, vec0, vect0, 16);
+
+    _viv_asm(COPY, min, packedMinData_FP16, 16);
+    _viv_asm(COPY, max, packedMaxData_FP16, 16);
+    VXC_Clamp_Half(vec0, vec0, min, max, VXC_MODIFIER_CLAMP(0, 7, 0, 0));
+    _viv_asm(COPY, dst, vec0, 16);
+
+    VXC_WriteImage2DArray(output, coord, dst, VXC_MODIFIER(0, 7, 0,VXC_RM_TowardZero, 0));
+}
+
+_viv_uniform int4 packedMinDataInt16;
+_viv_uniform int4 packedMaxDataInt16;
+__kernel void vxcActivation_Clip_I16toI16 (
+    __read_only image2d_array_t   input,
+    __write_only image2d_array_t  output)
+{
+    int4 coord = (int4)(get_global_id(0), get_global_id(1), get_global_id(2), 0);
+
+    vxc_short8 src0, min, max;
+    vxc_float4 vec0, vec1;
+    VXC_ReadImage2DArray(src0, input, coord, 0, VXC_MODIFIER(0, 7, 0, VXC_RM_TowardZero, 0));
+
+    VXC_DP2x8(src0, src0, src0, VXC_MODIFIER(0, 7, 0, VXC_RM_ToNearestEven, 1), uniConvertIntegerLo_2x8);
+
+    _viv_asm(COPY, min, packedMinDataInt16, 16);
+    _viv_asm(COPY, max, packedMaxDataInt16, 16);
+    VXC_Clamp(src0, src0, min, max, VXC_MODIFIER_CLAMP(0, 7, 0, 0));
+    VXC_WriteImage2DArray(output, coord, src0, VXC_MODIFIER(0, 7, 0,VXC_RM_TowardZero, 0));
+}
+
+__kernel void vxcActivation_Clip_I16toI16_2D (
+    __read_only image2d_array_t   input,
+    __write_only image2d_array_t  output)
+{
+    int2 coord = (int2)(get_global_id(0), get_global_id(1));
+
+    vxc_short8 src0, min, max;
+    vxc_float4 vec0, vec1;
+    VXC_ReadImage(src0, input, coord, 0, VXC_MODIFIER(0, 7, 0, VXC_RM_TowardZero, 0));
+
+    VXC_DP2x8(src0, src0, src0, VXC_MODIFIER(0, 7, 0, VXC_RM_ToNearestEven, 1), uniConvertIntegerLo_2x8);
+
+    _viv_asm(COPY, min, packedMinDataInt16, 16);
+    _viv_asm(COPY, max, packedMaxDataInt16, 16);
+    VXC_Clamp(src0, src0, min, max, VXC_MODIFIER_CLAMP(0, 7, 0, 0));
+    VXC_WriteImage(output, coord, src0, VXC_MODIFIER(0, 7, 0,VXC_RM_TowardZero, 0));
+}
+
+
